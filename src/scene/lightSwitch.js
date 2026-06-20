@@ -1,24 +1,23 @@
-const NEON_EMISSIVE_INTENSITY = 2.0
-const NEON_RECT_LIGHT_INTENSITY = 5
-
-export function setupLightSwitch({ hemiLight, directionalLight, neonMaterials, rectLight }) {
-  const ledIntensity = { hemi: hemiLight.intensity, directional: directionalLight.intensity }
-  let neonOn = false
+// 가게 메인 조명(LED) on/off — 네온 사인은 neonToggle.js에서 개별로 따로 제어
+export function setupLightSwitch({ hemiLight, directionalLight, ledLight, ledFixtureMaterial }) {
+  const ledIntensity = {
+    hemi: hemiLight.intensity,
+    directional: directionalLight.intensity,
+    point: ledLight.intensity,
+    fixtureEmissive: ledFixtureMaterial.emissiveIntensity,
+  }
+  let ledOn = true
 
   function apply() {
-    hemiLight.intensity = neonOn ? 0 : ledIntensity.hemi
-    directionalLight.intensity = neonOn ? 0 : ledIntensity.directional
-    for (const material of neonMaterials) {
-      material.emissiveIntensity = neonOn ? NEON_EMISSIVE_INTENSITY : 0
-    }
-    rectLight.intensity = neonOn ? NEON_RECT_LIGHT_INTENSITY : 0
+    hemiLight.intensity = ledOn ? ledIntensity.hemi : 0
+    directionalLight.intensity = ledOn ? ledIntensity.directional : 0
+    ledLight.intensity = ledOn ? ledIntensity.point : 0
+    ledFixtureMaterial.emissiveIntensity = ledOn ? ledIntensity.fixtureEmissive : 0
   }
-
-  apply() // 기본값: LED 켜짐, 네온 꺼짐
 
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'l' && e.key !== 'L') return
-    neonOn = !neonOn
+    ledOn = !ledOn
     apply()
   })
 }

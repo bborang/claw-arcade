@@ -1,10 +1,9 @@
 import * as THREE from 'three'
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js'
+import { createFloorTexture, createWallTexture, createCeilingTexture } from './textures.js'
 
-const HALF = 4 // 8x8 가게, 중앙(0,0,0) 기준
 const WALL_HEIGHT = 4
 const WALL_Y = WALL_HEIGHT / 2
-const DOOR_HALF_WIDTH = 1
 const DOOR_HEIGHT = 2.4
 
 const MACHINE_ROW_Z = 2.2 // 뒷벽(z=4)과 히어로 기계가 안 겹치도록
@@ -12,64 +11,124 @@ const MACHINE_ROW_Z = 2.2 // 뒷벽(z=4)과 히어로 기계가 안 겹치도록
 export const PEDESTAL_HEIGHT = 1 // 기계 받침대 높이 — 인형/집게 영역은 이 위부터 시작
 export const MACHINE_HALF = 1.0 // 히어로 기계 (2m x 2m) 절반 폭
 export const BG_MACHINE_HALF = 0.75 // 배경 기계 (1.5m x 1.5m) 절반 폭 — 높이는 히어로 기계와 동일
+export const HALF = 4 // 가게 외곽 절반 폭 (8x8) — 충돌/경계 계산에서 재사용
+export const DOOR_HALF_WIDTH = 1 // 문 절반 폭 — 충돌 계산에서 재사용
+export const OUTDOOR_DEPTH = 8 // 입구 기준 밖으로 나갈 수 있는 8x8 영역
 
 export function buildStore(scene) {
   // --- 바닥 ---
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(HALF * 2, HALF * 2),
-    new THREE.MeshStandardMaterial({ color: 0x33303a })
+    new THREE.MeshStandardMaterial({ color: 0x33303a, map: createFloorTexture() })
   )
   floor.rotation.x = -Math.PI / 2
   scene.add(floor)
 
-  const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4550 })
+  // --- 야외 바닥 (입구 기준 -Z 방향으로 8x8) ---
+  const outdoorFloor = new THREE.Mesh(
+    new THREE.PlaneGeometry(HALF * 2, OUTDOOR_DEPTH),
+    new THREE.MeshStandardMaterial({ color: 0x33303a, map: createFloorTexture() })
+  )
+  outdoorFloor.rotation.x = -Math.PI / 2
+  outdoorFloor.position.set(0, 0, -HALF - OUTDOOR_DEPTH / 2)
+  scene.add(outdoorFloor)
+
+  // 색상을 어둡게 지정하면 텍스처가 그 색으로 곱해져서 잘 안 보임 — 흰색으로 둬서 텍스처 본연의 색이 보이게
+  // 벽마다 크기가 달라서 같은 repeat 값을 쓰면 타일 밀도가 안 맞아 이상하게 보임 — 1타일당 TILE_METERS로 맞춤
+  const TILE_METERS = 2
+  const wallTextureFor = (width, height) =>
+    createWallTexture(width / TILE_METERS, height / TILE_METERS)
 
   // --- 뒷벽 (+Z, 기본 시점 정면) ---
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(HALF * 2, WALL_HEIGHT, 0.2), wallMaterial)
+  const backWall = new THREE.Mesh(
+    new THREE.BoxGeometry(HALF * 2, WALL_HEIGHT, 0.2),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, map: wallTextureFor(HALF * 2, WALL_HEIGHT) })
+  )
   backWall.position.set(0, WALL_Y, HALF)
   scene.add(backWall)
 
   // --- 좌/우 벽 ---
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, WALL_HEIGHT, HALF * 2), wallMaterial)
+  const sideWallMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: wallTextureFor(HALF * 2, WALL_HEIGHT),
+  })
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, WALL_HEIGHT, HALF * 2), sideWallMaterial)
   leftWall.position.set(-HALF, WALL_Y, 0)
   scene.add(leftWall)
 
-  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, WALL_HEIGHT, HALF * 2), wallMaterial)
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, WALL_HEIGHT, HALF * 2), sideWallMaterial)
   rightWall.position.set(HALF, WALL_Y, 0)
   scene.add(rightWall)
 
   // --- 입구 벽 (-Z, 문틀만, 밖으로 나가는 기능은 구현 안 함) ---
   const sideSegmentWidth = HALF - DOOR_HALF_WIDTH
+  const frontWallMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: wallTextureFor(sideSegmentWidth, WALL_HEIGHT),
+  })
   const frontLeftWall = new THREE.Mesh(
     new THREE.BoxGeometry(sideSegmentWidth, WALL_HEIGHT, 0.2),
-    wallMaterial
+    frontWallMaterial
   )
   frontLeftWall.position.set(-(DOOR_HALF_WIDTH + sideSegmentWidth / 2), WALL_Y, -HALF)
   scene.add(frontLeftWall)
 
   const frontRightWall = new THREE.Mesh(
     new THREE.BoxGeometry(sideSegmentWidth, WALL_HEIGHT, 0.2),
-    wallMaterial
+    frontWallMaterial
   )
   frontRightWall.position.set(DOOR_HALF_WIDTH + sideSegmentWidth / 2, WALL_Y, -HALF)
   scene.add(frontRightWall)
 
   const doorFrameMaterial = new THREE.MeshStandardMaterial({ color: 0x222226 })
+  const PILLAR_WIDTH = 0.2
 
-  const leftPillar = new THREE.Mesh(new THREE.BoxGeometry(0.2, DOOR_HEIGHT, 0.2), doorFrameMaterial)
-  leftPillar.position.set(-DOOR_HALF_WIDTH, DOOR_HEIGHT / 2, -HALF)
-  scene.add(leftPillar)
-
-  const rightPillar = new THREE.Mesh(new THREE.BoxGeometry(0.2, DOOR_HEIGHT, 0.2), doorFrameMaterial)
-  rightPillar.position.set(DOOR_HALF_WIDTH, DOOR_HEIGHT / 2, -HALF)
-  scene.add(rightPillar)
-
-  const lintel = new THREE.Mesh(
-    new THREE.BoxGeometry(DOOR_HALF_WIDTH * 2 + 0.2, 0.2, 0.2),
+  // 기둥은 문 안쪽에 딱 맞게 — 벽 경계선에 걸치면 겹쳐 보이는(z-fighting) 문제 발생
+  const pillarX = DOOR_HALF_WIDTH - PILLAR_WIDTH / 2
+  const leftPillar = new THREE.Mesh(
+    new THREE.BoxGeometry(PILLAR_WIDTH, DOOR_HEIGHT, 0.2),
     doorFrameMaterial
   )
-  lintel.position.set(0, DOOR_HEIGHT, -HALF)
+  leftPillar.position.set(-pillarX, DOOR_HEIGHT / 2, -HALF)
+  scene.add(leftPillar)
+
+  const rightPillar = new THREE.Mesh(
+    new THREE.BoxGeometry(PILLAR_WIDTH, DOOR_HEIGHT, 0.2),
+    doorFrameMaterial
+  )
+  rightPillar.position.set(pillarX, DOOR_HEIGHT / 2, -HALF)
+  scene.add(rightPillar)
+
+  // 상인방 — DOOR_HEIGHT 아래에 딱 붙게 (위쪽 벽과 겹치면 z-fighting으로 눈이 아픔)
+  const LINTEL_HEIGHT = 0.2
+  const lintel = new THREE.Mesh(
+    new THREE.BoxGeometry(DOOR_HALF_WIDTH * 2, LINTEL_HEIGHT, 0.2),
+    doorFrameMaterial
+  )
+  lintel.position.set(0, DOOR_HEIGHT - LINTEL_HEIGHT / 2, -HALF)
   scene.add(lintel)
+
+  // 문 위 빈 공간을 채우는 벽 (DOOR_HEIGHT ~ WALL_HEIGHT) — 상인방 바로 위부터 시작해서 안 겹침
+  const doorHeaderHeight = WALL_HEIGHT - DOOR_HEIGHT
+  const doorHeaderWall = new THREE.Mesh(
+    new THREE.BoxGeometry(DOOR_HALF_WIDTH * 2, doorHeaderHeight, 0.2),
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      map: wallTextureFor(DOOR_HALF_WIDTH * 2, doorHeaderHeight),
+    })
+  )
+  doorHeaderWall.position.set(0, DOOR_HEIGHT + doorHeaderHeight / 2, -HALF)
+  scene.add(doorHeaderWall)
+
+  // --- 천장 (벽과 동일 텍스처/래핑) ---
+  const ceilingMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: createCeilingTexture(HALF * 2 / TILE_METERS, HALF * 2 / TILE_METERS),
+  })
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, HALF * 2), ceilingMaterial)
+  ceiling.rotation.x = Math.PI / 2
+  ceiling.position.y = WALL_HEIGHT
+  scene.add(ceiling)
 
   // --- 히어로 기계 (속이 빈 프레임 — 안의 집게/인형이 보이도록 윗면 없음, 핑크/레드 계열) ---
   const heroMachine = buildMachineCabinet(0, MACHINE_ROW_Z, 0xff3366, 0xff0044)
@@ -86,40 +145,70 @@ export function buildStore(scene) {
     bgMachines.push(machine)
   }
 
-  // --- 네온 사인 (블룸용) + 면광원 — LED/네온 스위치에서 켜고 끄기 위해 참조 반환 ---
-  const { neonMaterials, rectLight } = buildNeonSigns(scene)
+  // --- 네온 사인 (벽마다 정중앙에 1개, 개별 토글용으로 참조 반환) ---
+  const neonLights = buildNeonSigns(scene)
 
-  return { heroMachine, bgMachines, neonMaterials, rectLight }
+  // --- 가게 정중앙 천장에 실제로 빛이 나오는 LED 조명 (LED/네온 스위치에서 같이 토글) ---
+  const { ledLight, ledFixtureMaterial } = buildLedFixture(scene)
+
+  return { heroMachine, bgMachines, neonLights, ledLight, ledFixtureMaterial }
+}
+
+function buildLedFixture(scene) {
+  const ledFixtureMaterial = new THREE.MeshStandardMaterial({
+    color: 0xfff4e0,
+    emissive: 0xfff4e0,
+    emissiveIntensity: 1.0,
+    toneMapped: false, // 블룸이 잘 먹히도록 — 네온 사인과 동일한 방식
+  })
+  const FIXTURE_SIZE = 0.5
+  const fixture = new THREE.Mesh(
+    new THREE.BoxGeometry(FIXTURE_SIZE, 0.04, FIXTURE_SIZE),
+    ledFixtureMaterial
+  )
+  fixture.position.set(0, WALL_HEIGHT - 0.02, 0) // 가게 정중앙 천장에 딱 붙임 (0.5x0.5m 사각 패널)
+  scene.add(fixture)
+
+  const ledLight = new THREE.PointLight(0xfff4e0, 4, 10, 2)
+  ledLight.position.set(0, WALL_HEIGHT - 0.1, 0) // 조명 위치 = 실제 빛이 나오는 지점
+  scene.add(ledLight)
+
+  return { ledLight, ledFixtureMaterial }
 }
 
 function buildNeonSigns(scene) {
+  const NEON_Y = 2.8 + 0.5 // 기존 위치보다 0.5m 높게
+  // 벽마다 정중앙에 1개씩 — 뒷벽/좌측벽/우측벽 (문 있는 입구 벽은 제외)
   const signs = [
-    { x: -2.5, color: 0x00ffff },
-    { x: 0, color: 0xff00ff },
-    { x: 2.5, color: 0xffff00 },
+    { color: 0x00ffff, position: [0, NEON_Y, HALF - 0.15], rotationY: 0 }, // 뒷벽 중앙
+    { color: 0xff00ff, position: [-HALF + 0.15, NEON_Y, 0], rotationY: Math.PI / 2 }, // 좌측벽 중앙
+    { color: 0xffff00, position: [HALF - 0.15, NEON_Y, 0], rotationY: Math.PI / 2 }, // 우측벽 중앙
   ]
-  const neonMaterials = []
+
+  RectAreaLightUniformsLib.init() // 빼먹으면 안 보임 — 단골 함정
+
+  const neonLights = []
   for (const s of signs) {
     const material = new THREE.MeshStandardMaterial({
-        color: s.color,
-        emissive: s.color,
-        emissiveIntensity: 2.0,
-        toneMapped: false, // 톤맵 무시해서 진짜 밝게 — 블룸이 잘 먹힘
-      })
-    neonMaterials.push(material)
+      color: s.color,
+      emissive: s.color,
+      emissiveIntensity: 0, // 기본값: 꺼짐 — 1/2/3 키로 개별 토글
+      toneMapped: false, // 톤맵 무시해서 진짜 밝게 — 블룸이 잘 먹힘
+    })
     const sign = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.05), material)
-    sign.position.set(s.x, 2.8, HALF - 0.15)
+    sign.position.set(...s.position)
+    sign.rotation.y = s.rotationY
     scene.add(sign)
+
+    const rectLight = new THREE.RectAreaLight(s.color, 0, 1.8, 0.3)
+    rectLight.position.set(...s.position)
+    rectLight.lookAt(0, 1, 0)
+    scene.add(rectLight)
+
+    neonLights.push({ material, rectLight })
   }
 
-  // 마젠타 네온 자리에 면광원(RectAreaLight) 추가
-  RectAreaLightUniformsLib.init() // 빼먹으면 안 보임 — 단골 함정
-  const rectLight = new THREE.RectAreaLight(0xff00ff, 5, 1.8, 0.3)
-  rectLight.position.set(0, 2.8, HALF - 0.2)
-  rectLight.lookAt(0, 1, 0)
-  scene.add(rectLight)
-
-  return { neonMaterials, rectLight }
+  return neonLights
 }
 
 function buildMachineCabinet(x, z, frameColor, emissiveColor, machineHalf = MACHINE_HALF) {

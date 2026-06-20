@@ -24,10 +24,10 @@ export function setupScene() {
   controls.enabled = false
 
   // 기본 LED 조명 — 가게 내부가 또렷하게 보이도록 중성광/높은 강도로 설정 (lightSwitch.js에서 L키로 토글)
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x999999, 1.4)
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x999999, 1.2)
   scene.add(hemiLight)
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 2.2)
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2)
   directionalLight.position.set(3, 5, 4)
   scene.add(directionalLight)
 

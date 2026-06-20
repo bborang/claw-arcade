@@ -5,8 +5,11 @@ legendEl.innerHTML = `
   <div>T 걷기 ↔ 집게 모드 전환</div>
   <div>WASD 집게 이동 (집게 모드)</div>
   <div>Space 집게 하강/잡기</div>
-  <div>L LED ↔ 네온 조명</div>
+  <div>L 실내 LED 조명 on/off</div>
+  <div>7 / 8 / 9 벽면 네온 사인 개별 on/off</div>
   <div>G 와이어프레임 토글</div>
+  <div>H GI(Global Illumination) on/off</div>
+  <div>P GI 프로브 마커 표시/숨김</div>
 `
 Object.assign(legendEl.style, {
   position: 'fixed',
