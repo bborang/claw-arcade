@@ -1,25 +1,15 @@
 import { keys } from './input.js'
 
 const SPEED = 1.5
-
-function lerpAngle(current, target, t) {
-  let diff = target - current
-  diff = ((diff + Math.PI) % (Math.PI * 2)) - Math.PI
-  return current + diff * t
-}
+const TURN_SPEED = 2.5 // A/D 회전 속도 (rad/sec)
 
 export function updateMovement(character, delta) {
-  const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0)
-  const moveZ = (keys.w ? 1 : 0) - (keys.s ? 1 : 0)
-  if (moveX === 0 && moveZ === 0) return
+  if (keys.a) character.rotation.y += TURN_SPEED * delta
+  if (keys.d) character.rotation.y -= TURN_SPEED * delta
 
-  const length = Math.hypot(moveX, moveZ)
-  const dirX = moveX / length
-  const dirZ = moveZ / length
-
-  character.position.x += dirX * SPEED * delta
-  character.position.z += dirZ * SPEED * delta
-
-  const targetRotation = Math.atan2(-dirX, dirZ)
-  character.rotation.y = lerpAngle(character.rotation.y, targetRotation, 0.2)
+  if (keys.w) {
+    // 카메라들이 캐릭터 forward를 (0,0,1).applyQuaternion()으로 쓰는 것과 동일한 부호 — thirdPersonCamera.js / firstPersonCamera.js 참고
+    character.position.x += Math.sin(character.rotation.y) * SPEED * delta
+    character.position.z += Math.cos(character.rotation.y) * SPEED * delta
+  }
 }

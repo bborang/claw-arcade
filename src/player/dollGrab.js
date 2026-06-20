@@ -1,6 +1,6 @@
 import { PEDESTAL_HEIGHT } from '../scene/buildStore.js'
 
-const GRAB_RADIUS = 0.2 // 정확히 안 맞아도 비슷한 위치면 잡히도록 여유를 둠
+const GRAB_RADIUS = 0.25 // 정확히 안 맞아도 비슷한 위치면 잡히도록 여유를 둠
 const GRIP_CHANCE = 0.6
 const DESPAWN_DELAY = 1500 // 배출구에 놓인 뒤 사라지기까지(ms)
 

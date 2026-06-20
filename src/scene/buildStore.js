@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js'
 
 const HALF = 4 // 8x8 가게, 중앙(0,0,0) 기준
 const WALL_HEIGHT = 4
@@ -10,7 +11,7 @@ const MACHINE_ROW_Z = 2.2 // 뒷벽(z=4)과 히어로 기계가 안 겹치도록
 
 export const PEDESTAL_HEIGHT = 1 // 기계 받침대 높이 — 인형/집게 영역은 이 위부터 시작
 export const MACHINE_HALF = 1.0 // 히어로 기계 (2m x 2m) 절반 폭
-export const BG_MACHINE_HALF = 0.4 // 배경 기계 (0.8m x 0.8m) 절반 폭
+export const BG_MACHINE_HALF = 0.75 // 배경 기계 (1.5m x 1.5m) 절반 폭 — 높이는 히어로 기계와 동일
 
 export function buildStore(scene) {
   // --- 바닥 ---
@@ -70,44 +71,74 @@ export function buildStore(scene) {
   lintel.position.set(0, DOOR_HEIGHT, -HALF)
   scene.add(lintel)
 
-  // --- 배경 기계 2개 (솔리드 박스, 장식용 — 히어로 기계와 안 겹치게 좌우로 이동) ---
-  const machineMaterial = new THREE.MeshStandardMaterial({ color: 0x55525c })
-  const bgMachineXs = [-2, 2]
+  // --- 히어로 기계 (속이 빈 프레임 — 안의 집게/인형이 보이도록 윗면 없음, 핑크/레드 계열) ---
+  const heroMachine = buildMachineCabinet(0, MACHINE_ROW_Z, 0xff3366, 0xff0044)
+  scene.add(heroMachine)
+
+  // --- 배경 기계 2개 (히어로 기계의 70% 크기, 앞면을 히어로 기계 앞면과 맞춰서 정렬, 연두색 계열) ---
+  const heroFrontZ = MACHINE_ROW_Z - MACHINE_HALF
+  const bgMachineZ = heroFrontZ + BG_MACHINE_HALF
+  const bgMachineXs = [-2.0, 2.0]
   const bgMachines = []
   for (const x of bgMachineXs) {
-    const machine = new THREE.Mesh(
-      new THREE.BoxGeometry(BG_MACHINE_HALF * 2, 1.8, BG_MACHINE_HALF * 2),
-      machineMaterial
-    )
-    machine.position.set(x, 0.9, MACHINE_ROW_Z)
+    const machine = buildMachineCabinet(x, bgMachineZ, 0x33cc66, 0x22aa44, BG_MACHINE_HALF)
     scene.add(machine)
     bgMachines.push(machine)
   }
 
-  // --- 히어로 기계 (속이 빈 프레임 — 안의 집게/인형이 보이도록 윗면 없음) ---
-  const heroMachine = buildHeroMachineCabinet(0, MACHINE_ROW_Z)
-  scene.add(heroMachine)
+  // --- 네온 사인 (블룸용) + 면광원 — LED/네온 스위치에서 켜고 끄기 위해 참조 반환 ---
+  const { neonMaterials, rectLight } = buildNeonSigns(scene)
 
-  return { heroMachine, bgMachines }
+  return { heroMachine, bgMachines, neonMaterials, rectLight }
 }
 
-function buildHeroMachineCabinet(x, z) {
+function buildNeonSigns(scene) {
+  const signs = [
+    { x: -2.5, color: 0x00ffff },
+    { x: 0, color: 0xff00ff },
+    { x: 2.5, color: 0xffff00 },
+  ]
+  const neonMaterials = []
+  for (const s of signs) {
+    const material = new THREE.MeshStandardMaterial({
+        color: s.color,
+        emissive: s.color,
+        emissiveIntensity: 2.0,
+        toneMapped: false, // 톤맵 무시해서 진짜 밝게 — 블룸이 잘 먹힘
+      })
+    neonMaterials.push(material)
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.05), material)
+    sign.position.set(s.x, 2.8, HALF - 0.15)
+    scene.add(sign)
+  }
+
+  // 마젠타 네온 자리에 면광원(RectAreaLight) 추가
+  RectAreaLightUniformsLib.init() // 빼먹으면 안 보임 — 단골 함정
+  const rectLight = new THREE.RectAreaLight(0xff00ff, 5, 1.8, 0.3)
+  rectLight.position.set(0, 2.8, HALF - 0.2)
+  rectLight.lookAt(0, 1, 0)
+  scene.add(rectLight)
+
+  return { neonMaterials, rectLight }
+}
+
+function buildMachineCabinet(x, z, frameColor, emissiveColor, machineHalf = MACHINE_HALF) {
   const cabinet = new THREE.Group()
-  cabinet.name = 'heroMachine'
+  cabinet.name = 'machineCabinet'
   cabinet.position.set(x, 0, z)
 
-  const INTERIOR_HEIGHT = 1.5 // 받침대(1m) + 인테리어(1.5m) = 총 2.5m
+  const INTERIOR_HEIGHT = 1.5 // 받침대(1m) + 인테리어(1.5m) = 총 2.5m — 크기와 무관하게 높이는 동일
 
   const frameMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff3366,
-    emissive: 0xff0044,
+    color: frameColor,
+    emissive: emissiveColor,
     emissiveIntensity: 0.3,
   })
 
   // 받침대 (0 ~ PEDESTAL_HEIGHT, 검은색)
   const pedestalMaterial = new THREE.MeshStandardMaterial({ color: 0x0a0a0a })
   const pedestal = new THREE.Mesh(
-    new THREE.BoxGeometry(MACHINE_HALF * 2, PEDESTAL_HEIGHT, MACHINE_HALF * 2),
+    new THREE.BoxGeometry(machineHalf * 2, PEDESTAL_HEIGHT, machineHalf * 2),
     pedestalMaterial
   )
   pedestal.position.y = PEDESTAL_HEIGHT / 2
@@ -115,17 +146,17 @@ function buildHeroMachineCabinet(x, z) {
 
   // 인형/집게 영역 바닥 (받침대 위)
   const floor = new THREE.Mesh(
-    new THREE.BoxGeometry(MACHINE_HALF * 2, 0.05, MACHINE_HALF * 2),
+    new THREE.BoxGeometry(machineHalf * 2, 0.05, machineHalf * 2),
     frameMaterial
   )
   floor.position.y = PEDESTAL_HEIGHT + 0.025
   cabinet.add(floor)
 
   const pillarPositions = [
-    [MACHINE_HALF, MACHINE_HALF],
-    [MACHINE_HALF, -MACHINE_HALF],
-    [-MACHINE_HALF, MACHINE_HALF],
-    [-MACHINE_HALF, -MACHINE_HALF],
+    [machineHalf, machineHalf],
+    [machineHalf, -machineHalf],
+    [-machineHalf, machineHalf],
+    [-machineHalf, -machineHalf],
   ]
   for (const [px, pz] of pillarPositions) {
     const pillar = new THREE.Mesh(
@@ -136,12 +167,14 @@ function buildHeroMachineCabinet(x, z) {
     cabinet.add(pillar)
   }
 
-  // 배출 통로 (집게가 인형을 놓는 위치, clawBounds의 드롭 좌표와 맞춤)
+  // 배출 통로 (집게가 인형을 놓는 위치, clawBounds의 드롭 좌표와 맞춤 — 크기에 비례해서 스케일)
   const floorTopY = PEDESTAL_HEIGHT + 0.05 // floor 박스 윗면 — 통로 표시는 이 위에 그려야 안 가려짐
-  buildChute(cabinet, -0.9, 0.9, 0.18, floorTopY)
+  const chuteOffset = machineHalf - 0.1
+  const chuteSize = 0.18 * (machineHalf / MACHINE_HALF)
+  buildChute(cabinet, -chuteOffset, chuteOffset, chuteSize, floorTopY)
 
   // 뚜껑 (핑크색 테두리만 — 가운데를 막으면 operate 카메라가 안을 못 봄)
-  buildLidTrim(cabinet, MACHINE_HALF, PEDESTAL_HEIGHT + INTERIOR_HEIGHT, frameMaterial)
+  buildLidTrim(cabinet, machineHalf, PEDESTAL_HEIGHT + INTERIOR_HEIGHT, frameMaterial)
 
   return cabinet
 }

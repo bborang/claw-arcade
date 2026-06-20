@@ -23,17 +23,13 @@ export function setupScene() {
   controls.update()
   controls.enabled = false
 
-  const hemiLight = new THREE.HemisphereLight(0x1a2540, 0x0a0a0c, 0.6)
+  // 기본 LED 조명 — 가게 내부가 또렷하게 보이도록 중성광/높은 강도로 설정 (lightSwitch.js에서 L키로 토글)
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x999999, 1.4)
   scene.add(hemiLight)
 
-  const directionalLight = new THREE.DirectionalLight(0x8fa8ff, 0.5)
-  directionalLight.position.set(3, 4, 5)
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 2.2)
+  directionalLight.position.set(3, 5, 4)
   scene.add(directionalLight)
-
-  // 작업용 임시 조명 (밤 분위기 잡는 8단계에서 빼거나 줄일 것)
-  const workLight = new THREE.DirectionalLight(0xffffff, 2.5)
-  workLight.position.set(0, 25, -5)
-  scene.add(workLight)
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight
@@ -41,5 +37,5 @@ export function setupScene() {
     renderer.setSize(window.innerWidth, window.innerHeight)
   })
 
-  return { scene, camera, renderer, controls }
+  return { scene, camera, renderer, controls, hemiLight, directionalLight }
 }

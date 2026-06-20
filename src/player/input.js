@@ -11,5 +11,6 @@ window.addEventListener('keyup', (e) => {
 })
 
 export function isMoving() {
-  return keys.w || keys.a || keys.s || keys.d
+  // 캐릭터 이동(walk 모드)에서는 S가 더 이상 아무 동작도 하지 않음 — 집게(operate 모드)는 별도로 keys.s를 사용
+  return keys.w || keys.a || keys.d
 }
