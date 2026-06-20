@@ -1,44 +1,113 @@
 import * as THREE from 'three'
+import { setupScene } from './scene/setupScene.js'
+import { buildStore, MACHINE_HALF, BG_MACHINE_HALF } from './scene/buildStore.js'
+import { loadCharacter } from './player/loadCharacter.js'
+import { isMoving } from './player/input.js'
+import { updateMovement } from './player/movement.js'
+import { clampToStore } from './player/bounds.js'
+import { updateThirdPersonCamera, snapThirdPersonCamera } from './player/thirdPersonCamera.js'
+import { updateFirstPersonCamera } from './player/firstPersonCamera.js'
+import { updateOperateCamera } from './player/operateCamera.js'
+import { CameraMode, getCameraMode } from './player/cameraModes.js'
+import { state } from './player/state.js'
+import './player/modeToggle.js'
+import './player/clawInput.js'
+import { setInteractHintVisible } from './ui/interactHint.js'
+import { createClaw } from './player/claw.js'
+import { createClawBounds } from './player/clawBounds.js'
+import { clawState } from './player/clawState.js'
+import { createDolls } from './player/dolls.js'
+import { updateClawMovement } from './player/clawMovement.js'
+import { updateClawSequence } from './player/clawSequence.js'
+import { resolveCircleCollision } from './player/collision.js'
 
-const scene = new THREE.Scene()
-scene.background = new THREE.Color(0x0a0a14)
+const CHARACTER_RADIUS = 0.3
+const INTERACT_RADIUS = MACHINE_HALF + 0.5 // 기계 표면에서 0.5m 이내면 T 안내 표시
+const DOLL_COUNT = 16
 
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-)
-camera.position.z = 3
+const { scene, camera, renderer, controls } = setupScene()
+const { heroMachine, bgMachines } = buildStore(scene)
 
-const renderer = new THREE.WebGLRenderer({ antialias: true })
-renderer.setSize(window.innerWidth, window.innerHeight)
-document.querySelector('#app').appendChild(renderer.domElement)
+const machineColliders = [
+  { position: heroMachine.position, radius: MACHINE_HALF + CHARACTER_RADIUS },
+  ...bgMachines.map((m) => ({ position: m.position, radius: BG_MACHINE_HALF + CHARACTER_RADIUS })),
+]
 
-const geometry = new THREE.BoxGeometry(1, 1, 1)
-const material = new THREE.MeshStandardMaterial({ color: 0x4f9dff })
-const cube = new THREE.Mesh(geometry, material)
-scene.add(cube)
+const clawBounds = createClawBounds(heroMachine.position)
+const { claw, fingers } = createClaw(heroMachine.position)
+scene.add(claw)
+const dolls = createDolls(scene, clawBounds, DOLL_COUNT)
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
-scene.add(ambientLight)
+const clock = new THREE.Clock()
+let character = null
+let mixer = null
+let idleAction = null
+let walkAction = null
+let currentAction = null
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2)
-directionalLight.position.set(3, 4, 5)
-scene.add(directionalLight)
+loadCharacter(scene).then((result) => {
+  character = result.model
+  mixer = result.mixer
+  idleAction = result.idleAction
+  walkAction = result.walkAction
+  currentAction = idleAction
+  snapThirdPersonCamera(camera, character)
+})
+
+function updateAnimationState() {
+  const nextAction = state.mode === 'walk' && isMoving() ? walkAction : idleAction
+  if (nextAction !== currentAction) {
+    nextAction.reset().play()
+    currentAction.crossFadeTo(nextAction, 0.3, false)
+    currentAction = nextAction
+  }
+}
+
+function updateCamera() {
+  if (state.mode === 'operate') {
+    controls.enabled = false
+    updateOperateCamera(camera, heroMachine)
+    return
+  }
+
+  const mode = getCameraMode()
+  controls.enabled = mode === CameraMode.FREE
+
+  if (mode === CameraMode.FREE) {
+    controls.update()
+  } else if (character) {
+    if (mode === CameraMode.FOLLOW) updateThirdPersonCamera(camera, character)
+    else if (mode === CameraMode.FIRST) updateFirstPersonCamera(camera, character)
+  }
+}
 
 function animate() {
   requestAnimationFrame(animate)
+  const delta = clock.getDelta()
 
-  cube.rotation.x += 0.01
-  cube.rotation.y += 0.01
+  if (character) {
+    state.nearHeroMachine =
+      state.mode === 'walk' && character.position.distanceTo(heroMachine.position) < INTERACT_RADIUS
+    setInteractHintVisible(state.nearHeroMachine)
 
+    updateAnimationState()
+    mixer.update(delta)
+
+    if (state.mode === 'walk') {
+      updateMovement(character, delta)
+      for (const collider of machineColliders) {
+        resolveCircleCollision(character, collider.position, collider.radius)
+      }
+      clampToStore(character)
+    }
+  }
+
+  if (state.mode === 'operate') {
+    updateClawMovement(claw, clawBounds, clawState, delta)
+    updateClawSequence(scene, claw, fingers, clawBounds, dolls, clawState, delta)
+  }
+
+  updateCamera()
   renderer.render(scene, camera)
 }
 animate()
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight
-  camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
-})
