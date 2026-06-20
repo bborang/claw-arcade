@@ -115,6 +115,8 @@ function updateCamera() {
   const mode = getCameraMode()
   controls.enabled = mode === CameraMode.FREE
 
+  if (character) character.visible = mode !== CameraMode.FIRST // 1인칭은 카메라가 머리 위치라 몸이 시야를 가림
+
   if (mode === CameraMode.FREE) {
     controls.update()
   } else if (character) {
@@ -125,7 +127,8 @@ function updateCamera() {
 
 function animate() {
   requestAnimationFrame(animate)
-  const delta = clock.getDelta()
+  // 탭 전환 등으로 프레임이 끊기면 getDelta()가 수 초 단위로 튀어 캐릭터가 그만큼 순간이동함 — 한 프레임 최대치를 제한
+  const delta = Math.min(clock.getDelta(), 0.1)
 
   if (character) {
     state.nearHeroMachine =

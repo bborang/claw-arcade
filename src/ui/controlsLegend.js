@@ -6,6 +6,7 @@ legendEl.innerHTML = `
   <div>WASD 집게 이동 (집게 모드)</div>
   <div>Space 집게 하강/잡기</div>
   <div>L 실내 LED 조명 on/off</div>
+  <div> 1: FREE / 2: 3인칭 / 3: 1인칭시점 </div>
   <div>7 / 8 / 9 벽면 네온 사인 개별 on/off</div>
   <div>G 와이어프레임 토글</div>
   <div>H GI(Global Illumination) on/off</div>

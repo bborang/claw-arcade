@@ -4,7 +4,7 @@ import { createFloorTexture, createWallTexture, createCeilingTexture } from './t
 
 const WALL_HEIGHT = 4
 const WALL_Y = WALL_HEIGHT / 2
-const DOOR_HEIGHT = 2.4
+const DOOR_HEIGHT = 2.5
 
 const MACHINE_ROW_Z = 2.2 // 뒷벽(z=4)과 히어로 기계가 안 겹치도록
 
@@ -38,13 +38,23 @@ export function buildStore(scene) {
   // 색상을 어둡게 지정하면 텍스처가 그 색으로 곱해져서 잘 안 보임 — 흰색으로 둬서 텍스처 본연의 색이 보이게
   // 벽마다 크기가 달라서 같은 repeat 값을 쓰면 타일 밀도가 안 맞아 이상하게 보임 — 1타일당 TILE_METERS로 맞춤
   const TILE_METERS = 2
-  const wallTextureFor = (width, height) =>
-    createWallTexture(width / TILE_METERS, height / TILE_METERS)
+  // repeat을 정수로 반올림하면 벽마다 "실제 타일 크기(미터)"가 달라져 버림 — 문 위 헤더벽처럼
+  // 작은 벽은 반올림 때문에 타일이 1개로 뭉개져서 훨씨 크게 보였던 게 원인. 그래서 repeat은
+  // 항상 정확히 length/TILE_METERS로 고정해 타일 크기를 모든 벽에서 동일(2m)하게 맞추고,
+  // 대신 각 벽의 왼쪽/아래쪽 모서리의 월드 좌표를 offset으로 넘겨 같은 격자 위에서 이어붙인다.
+  const wallTextureFor = (width, height, originX = 0, originY = 0) => {
+    const texture = createWallTexture(width / TILE_METERS, height / TILE_METERS)
+    texture.offset.set(originX / TILE_METERS, originY / TILE_METERS)
+    return texture
+  }
 
   // --- 뒷벽 (+Z, 기본 시점 정면) ---
   const backWall = new THREE.Mesh(
     new THREE.BoxGeometry(HALF * 2, WALL_HEIGHT, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, map: wallTextureFor(HALF * 2, WALL_HEIGHT) })
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      map: wallTextureFor(HALF * 2, WALL_HEIGHT, -HALF, 0),
+    })
   )
   backWall.position.set(0, WALL_Y, HALF)
   scene.add(backWall)
@@ -52,7 +62,7 @@ export function buildStore(scene) {
   // --- 좌/우 벽 ---
   const sideWallMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    map: wallTextureFor(HALF * 2, WALL_HEIGHT),
+    map: wallTextureFor(HALF * 2, WALL_HEIGHT, -HALF, 0),
   })
   const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, WALL_HEIGHT, HALF * 2), sideWallMaterial)
   leftWall.position.set(-HALF, WALL_Y, 0)
@@ -63,21 +73,25 @@ export function buildStore(scene) {
   scene.add(rightWall)
 
   // --- 입구 벽 (-Z, 문틀만, 밖으로 나가는 기능은 구현 안 함) ---
+  // 왼쪽/오른쪽 벽이 서로 다른 월드 X 위치에 있으므로 텍스처(특히 offset)를 따로 둬야
+  // 문을 기준으로 같은 격자가 이어진다 — 텍스처를 공유하면 둘 다 같은 위상이 되어 어긋남
   const sideSegmentWidth = HALF - DOOR_HALF_WIDTH
-  const frontWallMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    map: wallTextureFor(sideSegmentWidth, WALL_HEIGHT),
-  })
   const frontLeftWall = new THREE.Mesh(
     new THREE.BoxGeometry(sideSegmentWidth, WALL_HEIGHT, 0.2),
-    frontWallMaterial
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      map: wallTextureFor(sideSegmentWidth, WALL_HEIGHT, -HALF, 0),
+    })
   )
   frontLeftWall.position.set(-(DOOR_HALF_WIDTH + sideSegmentWidth / 2), WALL_Y, -HALF)
   scene.add(frontLeftWall)
 
   const frontRightWall = new THREE.Mesh(
     new THREE.BoxGeometry(sideSegmentWidth, WALL_HEIGHT, 0.2),
-    frontWallMaterial
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      map: wallTextureFor(sideSegmentWidth, WALL_HEIGHT, DOOR_HALF_WIDTH, 0),
+    })
   )
   frontRightWall.position.set(DOOR_HALF_WIDTH + sideSegmentWidth / 2, WALL_Y, -HALF)
   scene.add(frontRightWall)
@@ -116,7 +130,7 @@ export function buildStore(scene) {
     new THREE.BoxGeometry(DOOR_HALF_WIDTH * 2, doorHeaderHeight, 0.2),
     new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      map: wallTextureFor(DOOR_HALF_WIDTH * 2, doorHeaderHeight),
+      map: wallTextureFor(DOOR_HALF_WIDTH * 2, doorHeaderHeight, -DOOR_HALF_WIDTH, DOOR_HEIGHT),
     })
   )
   doorHeaderWall.position.set(0, DOOR_HEIGHT + doorHeaderHeight / 2, -HALF)

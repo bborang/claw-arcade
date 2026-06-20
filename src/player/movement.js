@@ -1,7 +1,7 @@
 import { keys } from './input.js'
 
-const SPEED = 1.5
-const TURN_SPEED = 2.5 // A/D 회전 속도 (rad/sec)
+const SPEED = 0.7
+const TURN_SPEED = 2.0 // A/D 회전 속도 (rad/sec)
 
 export function updateMovement(character, delta) {
   if (keys.a) character.rotation.y += TURN_SPEED * delta
