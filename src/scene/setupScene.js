@@ -16,6 +16,11 @@ export function setupScene() {
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setPixelRatio(window.devicePixelRatio)
   renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.0
+  renderer.outputColorSpace = THREE.SRGBColorSpace
   document.querySelector('#app').appendChild(renderer.domElement)
 
   const controls = new OrbitControls(camera, renderer.domElement)
@@ -29,6 +34,14 @@ export function setupScene() {
 
   const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2)
   directionalLight.position.set(3, 5, 4)
+  directionalLight.castShadow = true
+  directionalLight.shadow.mapSize.set(2048, 2048)
+  directionalLight.shadow.camera.near = 0.1
+  directionalLight.shadow.camera.far = 20
+  directionalLight.shadow.camera.left = -6
+  directionalLight.shadow.camera.right = 6
+  directionalLight.shadow.camera.top = 6
+  directionalLight.shadow.camera.bottom = -6
   scene.add(directionalLight)
 
   window.addEventListener('resize', () => {

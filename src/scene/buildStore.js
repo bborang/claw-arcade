@@ -22,6 +22,7 @@ export function buildStore(scene) {
     new THREE.MeshStandardMaterial({ color: 0x33303a, map: createFloorTexture() })
   )
   floor.rotation.x = -Math.PI / 2
+  floor.receiveShadow = true
   scene.add(floor)
 
   // --- 야외 바닥 (입구 기준 -Z 방향으로 8x8) ---
@@ -31,6 +32,7 @@ export function buildStore(scene) {
   )
   outdoorFloor.rotation.x = -Math.PI / 2
   outdoorFloor.position.set(0, 0, -HALF - OUTDOOR_DEPTH / 2)
+  outdoorFloor.receiveShadow = true
   scene.add(outdoorFloor)
 
   // 색상을 어둡게 지정하면 텍스처가 그 색으로 곱해져서 잘 안 보임 — 흰색으로 둬서 텍스처 본연의 색이 보이게
@@ -264,6 +266,12 @@ function buildMachineCabinet(x, z, frameColor, emissiveColor, machineHalf = MACH
 
   // 뚜껑 (핑크색 테두리만 — 가운데를 막으면 operate 카메라가 안을 못 봄)
   buildLidTrim(cabinet, machineHalf, PEDESTAL_HEIGHT + INTERIOR_HEIGHT, frameMaterial)
+
+  cabinet.traverse((obj) => {
+    if (!obj.isMesh) return
+    obj.castShadow = true
+    obj.receiveShadow = true
+  })
 
   return cabinet
 }

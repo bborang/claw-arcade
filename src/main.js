@@ -88,6 +88,9 @@ loadCharacter(scene).then((result) => {
   walkAction = result.walkAction
   currentAction = idleAction
   snapThirdPersonCamera(camera, character)
+  character.traverse((obj) => {
+    if (obj.isMesh) obj.castShadow = true
+  })
 
   // 씬의 모든 요소가 갖춰진 뒤 한 번만 GI 프로브를 굽는다 (정적 bake)
   setupGI(renderer, scene, [character, claw], neonLights)

@@ -38,6 +38,9 @@ export function createClaw(machinePosition) {
 
   claw.add(head, wire, ...fingers)
   claw.position.set(machinePosition.x, PEDESTAL_HEIGHT + 1.3, machinePosition.z)
+  claw.traverse((obj) => {
+    if (obj.isMesh) obj.castShadow = true
+  })
 
   return { claw, fingers }
 }

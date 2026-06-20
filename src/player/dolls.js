@@ -39,6 +39,8 @@ export function createDolls(scene, bounds, count = 8) {
 
     const { x, z } = pickNonOverlappingXZ(bounds, placed)
     doll.position.set(x, PEDESTAL_HEIGHT + 0.15, z)
+    doll.castShadow = true
+    doll.receiveShadow = true
     placed.push({ x, z })
 
     scene.add(doll)
