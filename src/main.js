@@ -28,6 +28,8 @@ import { setupLightSwitch } from './scene/lightSwitch.js'
 import { setupNeonToggle } from './scene/neonToggle.js'
 import { setupCubeEnvironment } from './scene/environmentMap.js'
 import { setupGI } from './scene/giProbes.js'
+import { updateChallenge } from './player/challenge.js'
+import { updateChallengeHud } from './ui/challengeHud.js'
 
 const CHARACTER_RADIUS = 0.3
 const INTERACT_RADIUS = MACHINE_HALF + 0.5 // 기계 표면에서 0.5m 이내면 T 안내 표시
@@ -154,6 +156,9 @@ function animate() {
     updateClawMovement(claw, clawBounds, clawState, delta)
     updateClawSequence(scene, claw, fingers, clawBounds, dolls, clawState, delta)
   }
+
+  updateChallenge(delta)
+  updateChallengeHud()
 
   updateCamera()
   composer.render()

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { tryGrabDoll, releaseDoll, getDollRadius } from './dollGrab.js'
 import { setFingersCloseAmount, resetFingers, getGripRadiusForObjectRadius } from './claw.js'
+import { registerChallengeCatch } from './challenge.js'
 
 const DESCEND_SPEED = 0.8
 const ASCEND_SPEED = 0.6
@@ -35,6 +36,7 @@ export function updateClawSequence(scene, claw, fingers, bounds, dolls, clawStat
     claw.position.x = THREE.MathUtils.lerp(claw.position.x, dropX, 0.05)
     claw.position.z = THREE.MathUtils.lerp(claw.position.z, dropZ, 0.05)
     if (Math.abs(claw.position.x - dropX) < 0.02 && Math.abs(claw.position.z - dropZ) < 0.02) {
+      if (clawState.attachedDoll) registerChallengeCatch()
       releaseDoll(scene, clawState, dolls)
       resetFingers(fingers)
       clawState.phase = 'idle'

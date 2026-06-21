@@ -1,6 +1,6 @@
 import { keys } from './input.js'
 
-const SPEED = 0.7
+export const SPEED = 0.7 // loadCharacter.js에서 걷기 애니메이션 timeScale을 이 속도에 맞추는 데도 사용
 const TURN_SPEED = 2.0 // A/D 회전 속도 (rad/sec)
 
 export function updateMovement(character, delta) {

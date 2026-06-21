@@ -3,6 +3,7 @@ legendEl.innerHTML = `
   <div>W 전진</div>
   <div>A / D 좌우 회전</div>
   <div>T 걷기 ↔ 집게 모드 전환</div>
+  <div>Enter 30초 게임 시작 (집게 모드)</div>
   <div>WASD 집게 이동 (집게 모드)</div>
   <div>Space 집게 하강/잡기</div>
   <div>L 실내 LED 조명 on/off</div>
